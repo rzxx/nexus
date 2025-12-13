@@ -3,16 +3,18 @@
   "module": "index.ts",
   "type": "module",
   "private": true,
-  "devDependencies": {
-    "@types/bun": "latest"
+  "scripts": {
+    "dev": "nexus dev"
   },
-  "peerDependencies": {
+  "devDependencies": {
+    "@nexus/cli": "workspace:*",
+    "@types/bun": "latest",
     "typescript": "^5"
   },
   "dependencies": {
-    "@hono/zod-validator": "^0.7.5",
-    "@nexus/sdk": "link:@nexus/sdk",
+    "@nexus/sdk": "workspace:*",
     "hono": "^4.11.0",
+    "@hono/zod-validator": "^0.7.5",
     "zod": "^4.1.13"
   }
 }
