@@ -1,0 +1,12 @@
+{
+  "name": "@nexus/sdk",
+  "version": "0.0.1",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "devDependencies": {
+    "bun-types": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
