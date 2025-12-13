@@ -1,1 +1,1 @@
-{"user:1":{"value":{"name":"hello","role":"user"},"expires_at":1765653572323348600}}
+{"user:1":{"value":{"email":"hello@nexus.com","isAdmin":true,"username":"Hello"},"expires_at":1765654937345819500}}

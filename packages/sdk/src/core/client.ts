@@ -1,23 +1,30 @@
+import type { HttpMethod, JsonValue } from "../types";
+
 export interface NexusConfig {
-  engineUrl: string; // Например, http://localhost:4000
+  engineUrl: string;
 }
 
 export class NexusClient {
   private baseUrl: string;
 
   constructor(config: NexusConfig) {
-    this.baseUrl = config.engineUrl.replace(/\/$/, ""); // Убираем слеш в конце
+    // Убираем trailing slash, если есть
+    this.baseUrl = config.engineUrl.replace(/\/$/, "");
   }
 
   /**
-   * Универсальный метод для общения с Go-ядром
+   * request делает запрос к Engine.
+   * T = ожидаемый тип ответа.
+   * body = строго типизирован как JsonValue (никаких функций или circular objects).
    */
   async request<T>(
-    method: "GET" | "POST",
+    method: HttpMethod,
     path: string,
-    body?: any
-  ): Promise<T | null> {
-    const headers = { "Content-Type": "application/json" };
+    body?: JsonValue
+  ): Promise<T> {
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+    };
 
     const response = await fetch(`${this.baseUrl}${path}`, {
       method,
@@ -26,13 +33,22 @@ export class NexusClient {
     });
 
     if (!response.ok) {
-      // Пытаемся прочитать ошибку от Go
       const text = await response.text();
-      throw new Error(`Nexus Engine Error [${response.status}]: ${text}`);
+      // Выбрасываем типизированную ошибку, которую можно ловить
+      throw new Error(`[Nexus Engine] ${response.status}: ${text}`);
     }
 
-    // Если тело пустое (например, при status 204), возвращаем null
     const text = await response.text();
-    return text ? (JSON.parse(text) as T) : null;
+    if (!text) {
+      // Если тело пустое, но мы ожидали T, приходится возвращать null as T
+      // Это единственное "узкое место", где мы доверяем Engine.
+      return null as unknown as T;
+    }
+
+    try {
+      return JSON.parse(text) as T;
+    } catch (e) {
+      throw new Error(`[Nexus SDK] Failed to parse response: ${text}`);
+    }
   }
 }

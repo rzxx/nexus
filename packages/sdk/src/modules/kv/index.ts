@@ -1,26 +1,23 @@
 import { NexusClient } from "../../core/client";
+import type { JsonValue } from "../../types";
 
-// Типы данных (совпадают с Go JSON)
 export interface SetOptions {
   ttl?: number;
 }
 
 export class KVModule {
-  private client: NexusClient;
-
-  constructor(client: NexusClient) {
-    this.client = client;
-  }
+  constructor(private readonly client: NexusClient) {}
 
   /**
-   * Получить значение по ключу
+   * get возвращает типизированный ответ или null.
+   * Мы используем Generic <T>, чтобы пользователь указал структуру данных.
    */
-  async get<T>(key: string): Promise<T | null> {
+  async get<T extends JsonValue>(key: string): Promise<T | null> {
     try {
-      // Вызываем ручку Go Engine
+      // Здесь мы явно говорим клиенту, что ожидаем T
       return await this.client.request<T>("GET", `/kv/get?key=${key}`);
     } catch (e: any) {
-      // Если 404, возвращаем null (это нормальное поведение для KV)
+      // Обработка 404
       if (e.message && e.message.includes("404")) {
         return null;
       }
@@ -29,9 +26,14 @@ export class KVModule {
   }
 
   /**
-   * Сохранить значение
+   * set принимает только валидный JsonValue.
+   * Если пользователь попытается сунуть функцию () => {}, TS выдаст ошибку компиляции.
    */
-  async set(key: string, value: any, options?: SetOptions): Promise<void> {
+  async set(
+    key: string,
+    value: JsonValue,
+    options?: SetOptions
+  ): Promise<void> {
     await this.client.request("POST", "/kv/set", {
       key,
       value,

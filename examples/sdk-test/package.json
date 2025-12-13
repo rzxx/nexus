@@ -10,7 +10,9 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@hono/zod-validator": "^0.7.5",
+    "@nexus/sdk": "link:@nexus/sdk",
     "hono": "^4.11.0",
-    "@nexus/sdk": "link:@nexus/sdk"
+    "zod": "^4.1.13"
   }
 }
