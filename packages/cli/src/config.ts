@@ -9,6 +9,10 @@ export interface NexusConfig {
     port: number;
     path: string; // Путь к папке engine (../../engine)
   };
+  frontend?: {
+    port: number;
+    command: string;
+  };
 }
 
 // Дефолтный конфиг

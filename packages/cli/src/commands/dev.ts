@@ -15,7 +15,7 @@ export async function startDev(config: NexusConfig) {
       "--port",
       config.engine.port.toString(),
       "--kv-data-dir",
-      ".nexus/data",
+      "data",
       "--log-level",
       "2",
     ],
@@ -60,16 +60,34 @@ export async function startDev(config: NexusConfig) {
   readStream(appProc.stdout, "App");
   readStream(appProc.stderr, "App");
 
-  // --- 3. SHUTDOWN ---
+  // --- 3. FRONTEND (Vite) ---
+  let frontendProc: any = null;
+
+  if (config.frontend) {
+    const cmdParts = config.frontend.command.split(" ");
+    const cmd = cmdParts[0];
+    const args = cmdParts.slice(1);
+
+    if (cmd) {
+      frontendProc = spawn({
+        cmd: [cmd, ...args],
+        env: { ...process.env } as Record<string, string>,
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      readStream(frontendProc.stdout, "Vite");
+      readStream(frontendProc.stderr, "Vite");
+    }
+  }
+
+  // --- 4. SHUTDOWN ---
 
   // Обрабатываем Ctrl+C
   process.on("SIGINT", () => {
     logger.info("Nexus", "Stopping services...");
-
-    // Bun.spawn возвращает subprocess, у которого есть метод kill
     engineProc.kill();
     appProc.kill();
-
+    if (frontendProc) frontendProc.kill(); // Убиваем Vite
     process.exit(0);
   });
 }
@@ -77,7 +95,7 @@ export async function startDev(config: NexusConfig) {
 // Хелпер для чтения потока
 async function readStream(
   stream: ReadableStream | null,
-  name: "Engine" | "App"
+  name: "Engine" | "App" | "Vite"
 ) {
   if (!stream) return; // Защита от null
 

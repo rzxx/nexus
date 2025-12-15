@@ -1,6 +1,6 @@
 import pc from "picocolors";
 
-type ServiceName = "Nexus" | "Engine" | "App";
+type ServiceName = "Nexus" | "Engine" | "App" | "Vite";
 
 export const logger = {
   info: (service: ServiceName, msg: string) => {
@@ -30,5 +30,7 @@ function getPrefix(service: ServiceName) {
       return pc.magenta(" [Engine] "); // Фиолетовый как Go
     case "App":
       return pc.cyan(" [App]    "); // Голубой как TS
+    case "Vite":
+      return pc.green(" [Vite]   "); // Зеленый как Vite
   }
 }
