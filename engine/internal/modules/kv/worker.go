@@ -1,101 +1,57 @@
 package kv
 
 import (
-	"encoding/json"
-	"os"
 	"time"
 )
 
 func (s *Storage) startWorkers() {
-	// Воркер очистки (TTL)
 	go func() {
 		ticker := time.NewTicker(s.opts.CleanupInterval)
 		for range ticker.C {
-			s.cleanupProbabilistic()
+			s.cleanupShards()
 		}
 	}()
 
-	// Воркер персистенции
-	if s.opts.PersistPath != "" && s.opts.SaveInterval > 0 {
-		go func() {
-			ticker := time.NewTicker(s.opts.SaveInterval)
-			for range ticker.C {
-				s.SaveToFile()
+	// Snapshot Ticker (например, раз в 1 минуту или 5 минут)
+	go func() {
+		if s.opts.SaveInterval <= 0 {
+			s.log.Info("Snapshot interval is 0, auto-save disabled")
+			return
+		}
+		ticker := time.NewTicker(s.opts.SaveInterval)
+		defer ticker.Stop()
+		for range ticker.C {
+			if err := s.CreateSnapshot(); err != nil {
+				s.log.Error("Snapshot failed: %v", err)
 			}
-		}()
+		}
+	}()
+}
+
+func (s *Storage) cleanupShards() {
+	// Проходимся по каждому шарду по очереди, чтобы не грузить CPU
+	for i := 0; i < ShardCount; i++ {
+		s.cleanupSingleShard(s.shards[i])
 	}
 }
 
-// Алгоритм вероятностной очистки
-func (s *Storage) cleanupProbabilistic() {
+func (s *Storage) cleanupSingleShard(shard *Shard) {
 	sampleSize := 20
-	threshold := 25 // 25%
+	now := time.Now().UnixNano()
 
-	totalDeleted := 0
-	loops := 0
+	shard.mu.Lock()
+	defer shard.mu.Unlock()
 
-	for {
-		expiredCount := 0
-		processedCount := 0
-		now := time.Now().UnixNano()
-
-		s.mu.Lock()
-		for key, item := range s.items {
-			if processedCount >= sampleSize {
-				break
-			}
-			if now > item.ExpiresAt {
-				delete(s.items, key)
-				expiredCount++
-			}
-			processedCount++
-		}
-		s.mu.Unlock()
-
-		totalDeleted += expiredCount
-		loops++
-
-		if processedCount < sampleSize || (expiredCount*100/sampleSize) <= threshold {
+	processed := 0
+	for key, item := range shard.items {
+		if processed >= sampleSize {
 			break
 		}
-	}
-
-	if totalDeleted > 0 {
-		s.log.Info("🧹 Janitor: removed %d keys (in %d loops)", totalDeleted, loops)
-	}
-}
-
-// Сохранение дампа
-func (s *Storage) SaveToFile() error {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	file, err := os.Create(s.opts.PersistPath)
-	if err != nil {
-		s.log.Error("❌ Error creating dump: %v", err)
-		return err
-	}
-	defer file.Close()
-
-	s.log.Debug("💾 Saving snapshot to '%s'...", s.opts.PersistPath)
-	return json.NewEncoder(file).Encode(s.items)
-}
-
-// Загрузка дампа
-func (s *Storage) LoadFromFile() error {
-	file, err := os.Open(s.opts.PersistPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			s.log.Info("📂 No dump found, starting fresh.")
-			return nil
+		if now > item.ExpiresAt {
+			delete(shard.items, key)
+			// В идеале: записать в WAL событие {"op":"del", "k":key}
+			// Но для TTL это не обязательно, при перезагрузке они и так будут старыми
 		}
-		return err
+		processed++
 	}
-	defer file.Close()
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.log.Info("📂 Loading snapshot from '%s'...", s.opts.PersistPath)
-	return json.NewDecoder(file).Decode(&s.items)
 }

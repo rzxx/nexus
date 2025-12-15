@@ -2,11 +2,9 @@ package kv
 
 import (
 	"flag"
-	"fmt"
 	"net/http"
 	"nexus-engine/internal/core"
 	"nexus-engine/internal/pkg/logger"
-	"os"
 	"time"
 )
 
@@ -14,15 +12,14 @@ import (
 var _ core.Module = (*Module)(nil)
 
 type Module struct {
-	store   *Storage
-	options Options // Теперь мы будем это использовать
+	store *Storage
 
 	// Флаги CLI
 	fDataDir         *string
 	fUpstreamURL     *string
 	fUpstreamTTL     *int
-	fSaveInterval    *int // <--- Добавили флаг
-	fCleanupInterval *int // <--- Добавили флаг
+	fSaveInterval    *int
+	fCleanupInterval *int
 }
 
 func NewModule() *Module {
@@ -37,7 +34,7 @@ func (m *Module) RegisterFlags(fs *flag.FlagSet) {
 	m.fDataDir = fs.String("kv-data-dir", "./data", "Directory for KV persistence")
 
 	// Интервалы в секундах
-	m.fSaveInterval = fs.Int("kv-save-interval", 5, "Interval in seconds to save to disk")
+	m.fSaveInterval = fs.Int("kv-save-interval", 30, "Interval in seconds to save to disk")
 	m.fCleanupInterval = fs.Int("kv-cleanup-interval", 10, "Interval in seconds to remove expired keys")
 
 	m.fUpstreamURL = fs.String("kv-upstream-url", "", "URL for cache-aside pattern")
@@ -58,19 +55,10 @@ func (m *Module) Init(log *logger.Logger) error {
 		Logger:             log,
 	}
 
-	// 1. Исправляем "Unused variable": Сохраняем конфиг в структуру модуля
-	m.options = opts
-
-	// 2. Инициализируем хранилище
-	m.store = New(m.options)
-
-	// Создаем директорию для хранения данных, если ее нет
-	if err := os.MkdirAll(*m.fDataDir, 0755); err != nil {
-		return fmt.Errorf("failed to create data directory '%s': %w", *m.fDataDir, err)
-	}
-
-	if err := m.store.LoadFromFile(); err != nil {
-		log.Info("[%s] Starting fresh (no dump found)", m.Name())
+	var err error
+	m.store, err = New(opts)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -83,6 +71,8 @@ func (m *Module) RegisterRoutes(mux *http.ServeMux) {
 
 func (m *Module) Shutdown() {
 	if m.store != nil {
-		m.store.SaveToFile()
+		m.store.log.Info("Stopping KV Store...")
+		m.store.CreateSnapshot()
+		m.store.Close()
 	}
 }
