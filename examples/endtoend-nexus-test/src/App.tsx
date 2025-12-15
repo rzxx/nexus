@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { hc } from "hono/client";
-// 👇 Импортируем ТИП прямо из бэкенд-файла
-import type { AppType } from "./index";
+// 👇 Импортируем ТИПЫ прямо из бэкенд-файла
+import type { AppType, User } from "./api/index";
 
 // Создаем типизированный клиент
 // Указываем пустой URL, так как Vite проксирует /api на тот же домен
@@ -9,9 +9,8 @@ const client = hc<AppType>("/");
 
 function App() {
   const [email, setEmail] = useState("");
-  // Мы можем вывести тип ответа, используя InferResponseType из Hono,
-  // но пока сделаем проще (any для стейта UI, но запрос будет типизирован)
-  const [userData, setUserData] = useState<any>(null);
+  // Используем экспортированный тип `User` из бэкенда
+  const [userData, setUserData] = useState<User | null>(null);
 
   const saveUser = async () => {
     // 🪄 МАГИЯ ЗДЕСЬ 🪄

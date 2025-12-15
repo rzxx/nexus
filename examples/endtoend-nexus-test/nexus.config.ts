@@ -1,7 +1,7 @@
 export default {
   app: {
     port: 3000,
-    command: "bun run src/index.ts",
+    command: "bun run src/api/index.ts",
   },
   engine: {
     port: 4000,

@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { cors } from "hono/cors"; // bun add hono (уже есть)
+import { cors } from "hono/cors";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { createNexus } from "@nexus/sdk";
@@ -15,6 +15,9 @@ const userSchema = z.object({
   email: z.email(),
   role: z.enum(["admin", "user", "guest"]), // Добавим Enum для проверки типов
 });
+
+// Экспорт типа User для использования на фронтенде
+export type User = z.infer<typeof userSchema>;
 
 // --- API ROUTES ---
 // Мы чейним роуты, чтобы TS мог вывести их общий тип
@@ -39,4 +42,4 @@ const routes = app
 // ⚠️ ГЛАВНАЯ МАГИЯ: Экспорт типа роутера
 export type AppType = typeof routes;
 
-export default app;
+export default routes;
