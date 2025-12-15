@@ -34,7 +34,7 @@ func (m *Module) Name() string {
 }
 
 func (m *Module) RegisterFlags(fs *flag.FlagSet) {
-	m.fDataDir = fs.String("kv-data-dir", "./nexus-data", "Directory for KV persistence")
+	m.fDataDir = fs.String("kv-data-dir", "./data", "Directory for KV persistence")
 
 	// Интервалы в секундах
 	m.fSaveInterval = fs.Int("kv-save-interval", 5, "Interval in seconds to save to disk")

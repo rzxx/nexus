@@ -1,14 +1,18 @@
 import { NexusClient } from "./core/client";
 import type { NexusConfig } from "./core/client";
 import { KVModule } from "./modules/kv";
+import { WSModule } from "./modules/ws";
 
 export class Nexus {
   public readonly kv: KVModule;
+  public readonly ws: WSModule;
+
   private client: NexusClient;
 
   constructor(config: NexusConfig) {
     this.client = new NexusClient(config);
     this.kv = new KVModule(this.client);
+    this.ws = new WSModule(this.client);
   }
 }
 

@@ -11,6 +11,7 @@ import (
 
 	"nexus-engine/internal/core"
 	"nexus-engine/internal/modules/kv"
+	"nexus-engine/internal/modules/pubsub"
 	"nexus-engine/internal/pkg/logger"
 )
 
@@ -19,6 +20,7 @@ func main() {
 	// Чтобы добавить Queue, просто допишем: queue.NewModule()
 	enabledModules := []core.Module{
 		kv.NewModule(),
+		pubsub.NewModule(),
 	}
 
 	// 2. Настройка флагов
